@@ -8,9 +8,12 @@ fs_target = 16000;
 x = y(:,1); %taking chanel 1 only
 x_res = resample(x,fs_target,fs_old); %resampling onto 16khz
 
+%pre-emphasis-filter
+B=[1, -0.97];
+x_res = filter(B, 1, x_res, [], 2);
+
 
 %applying hamming window
-frame_length = 320;
 samples_num = length(x_res);
 frame_num = floor(samples_num/frame_length);
 for frame = 1:frame_num
@@ -18,10 +21,19 @@ for frame = 1:frame_num
     sample2 = (frame * frame_length);
     ham = hamming(frame_length);
     tf = x_res(sample1:sample2);
-    ham_res = ham.*tf;
-    dft = fft(ham_res);
-    plot(dft, 'r');
+    [magSpec, phaseSpec] = magAndPhase(tf);
+    plot(magSpec);
 end    
+
+function [magSpec, phaseSpec] = magAndPhase(shortTimeFrame)
+    frame_length = 320;
+    ham = hamming(frame_length);
+    ham_res = ham.*shortTimeFrame;
+    dft = fft(ham_res);
+    magSpec = abs(dft);
+    phaseSpec = angle(dft);   
+end
+
 
 
 
