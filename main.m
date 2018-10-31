@@ -17,25 +17,28 @@ x_res = filter(B, 1, x_res, [], 2);
 samples_num = length(x_res);
 frame_length = 320;
 frame_num = floor(samples_num/frame_length);
+magSpecArr;
+i = 1;
 
 for frame = 1:frame_num
     sample1 = (frame * frame_length) - (frame_length - 1);
     sample2 = (frame * frame_length);
     ham = hamming(frame_length);
     tf = x_res(sample1:sample2);
-    [magSpec, phaseSpec] = magAndPhase(tf);
-    %plot(magSpec);
-    magSpecArr=magSpec;
-    plot(magSpecArr);
+    [magSpec] = magAndPhase(tf);
+    plot(magSpec);
+    magSpecArr(:,i) = magSpec;
+    i=i+1;
 end    
 
-function [magSpec, phaseSpec] = magAndPhase(shortTimeFrame)
+plot(magSpecArr);
+function [magSpec] = magAndPhase(shortTimeFrame)
 frame_length = 320;
     ham = hamming(frame_length);
     ham_res = ham.*shortTimeFrame;
     dft = fft(ham_res);
-    magSpec = abs(dft);
-    phaseSpec = angle(dft);   
+    magSpecFull = abs(dft);
+    magSpec = magSpecFull(1:(length(magSpecFull)/2));  
 end
 
 
