@@ -17,7 +17,7 @@ x_res = filter(B, 1, x_res, [], 2);
 samples_num = length(x_res);
 frame_length = 320;
 frame_num = floor(samples_num/frame_length);
-magSpecArr;
+% magSpecArr;
 i = 1;
 
 for frame = 1:frame_num
@@ -26,12 +26,31 @@ for frame = 1:frame_num
     ham = hamming(frame_length);
     tf = x_res(sample1:sample2);
     [magSpec] = magAndPhase(tf);
-    plot(magSpec);
+%     plot(magSpec);
     magSpecArr(:,i) = magSpec;
     i=i+1;
 end    
 
-plot(magSpecArr);
+%%Filterbank%%
+numChan = 20;
+x = floor(linspace(1, frame_length/2, numChan));
+
+
+
+
+
+for arrayIndex = 2:numChan 
+    magSpecElem = magSpecArr(:, arrayIndex);
+    chanLength = length(magSpecElem) / numChan;
+    samp1 = (arrayIndex*chanLength) - (chanLength-1);
+    samp2 = arrayIndex * chanLength;
+    channel = magSpecElem(samp1:samp2);
+    chanMean = mean(channel);
+    disp("iteration " + arrayIndex + " = " + chanMean);
+end
+keyboard;
+
+% plot(magSpecArr);
 function [magSpec] = magAndPhase(shortTimeFrame)
 frame_length = 320;
     ham = hamming(frame_length);
@@ -40,8 +59,6 @@ frame_length = 320;
     magSpecFull = abs(dft);
     magSpec = magSpecFull(1:(length(magSpecFull)/2));  
 end
-
-
 
 
 
