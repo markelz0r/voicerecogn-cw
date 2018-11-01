@@ -36,21 +36,21 @@ numChan = 20;
 x = floor(linspace(1, frame_length/2, numChan));
 
 
-
-
-
-for arrayIndex = 2:numChan 
-    magSpecElem = magSpecArr(:, arrayIndex);
-    chanLength = length(magSpecElem) / numChan;
-    samp1 = (arrayIndex*chanLength) - (chanLength-1);
-    samp2 = arrayIndex * chanLength;
-    channel = magSpecElem(samp1:samp2);
-    chanMean = mean(channel);
-    disp("iteration " + arrayIndex + " = " + chanMean);
+for arrayIndex = 2:length(x)
+    magSpecElem = magSpecArr(:, arrayIndex);    
+    firstSamp = x(arrayIndex-1);
+    lastSamp = x(arrayIndex);
+    channel = magSpecElem(firstSamp:lastSamp);
+    chanMean(arrayIndex-1) = mean(channel);
+    disp("iteration " + arrayIndex);
 end
-keyboard;
 
-% plot(magSpecArr);
+plot(chanMean);
+logOfFilterBank = log10(chanMean); 
+vocalTract = dct(logOfFilterBank);
+
+plot(vocalTract);
+
 function [magSpec] = magAndPhase(shortTimeFrame)
 frame_length = 320;
     ham = hamming(frame_length);
