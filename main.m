@@ -17,9 +17,8 @@ x_res = filter(B, 1, x_res, [], 2);
 samples_num = length(x_res);
 frame_length = 320;
 frame_num = floor(samples_num/frame_length);
-% magSpecArr;
-i = 1;
 
+i = 1;
 for frame = 1:frame_num
     sample1 = (frame * frame_length) - (frame_length - 1);
     sample2 = (frame * frame_length);
