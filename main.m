@@ -35,24 +35,27 @@ for frame = 1:frame_num
 end    
 
 %%Filterbank%%
-numChan = 20;
+numChan = 21;
 x = floor(linspace(1, frame_length/2, numChan));
 
-
-for arrayIndex = 2:length(x)
-    magSpecElem = magSpecArr(:, arrayIndex);    
-    firstSamp = x(arrayIndex-1);
-    lastSamp = x(arrayIndex);
-    channel = magSpecElem(firstSamp:lastSamp);
-    chanMean(arrayIndex-1) = mean(channel);
-    disp("iteration " + arrayIndex);
+chanMean = zeros(1, numChan-1);
+filterBankArr = zeros(numChan-1,length(magSpecArr));
+vocalTractArr = zeros(((numChan-1)/2),length(magSpecArr));
+for magSpecArrIndex = 1:length(magSpecArr)
+    for arrayIndex = 2:length(x)
+        magSpecElem = magSpecArr(:, magSpecArrIndex);    
+        firstSamp = x(arrayIndex-1);
+        lastSamp = x(arrayIndex);
+        channel = magSpecElem(firstSamp:lastSamp);
+        chanMean(arrayIndex-1) = mean(channel);        
+    end
+    filterBankArr(:,magSpecArrIndex)= chanMean;
+    logOfFilterBank = log10(chanMean); 
+    dctResult = dct(logOfFilterBank);
+    vocalTractArr(:,magSpecArrIndex) = dctResult(1:length(dctResult)/2);
 end
 
-plot(chanMean);
-logOfFilterBank = log10(chanMean); 
-vocalTract = dct(logOfFilterBank);
-
-plot(vocalTract);
+plot(vocalTractArr);
 
 function [magSpec] = magAndPhase(shortTimeFrame)
 frame_length = 320;
