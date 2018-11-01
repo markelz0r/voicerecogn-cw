@@ -20,12 +20,16 @@ frame_num = floor(samples_num/frame_length);
 
 i = 1;
 for frame = 1:frame_num
-    sample1 = (frame * frame_length) - (frame_length - 1);
-    sample2 = (frame * frame_length);
+    if i==1 
+        sample1 = (frame * frame_length) - (frame_length - 1);
+        sample2 = (frame * frame_length);
+    else  
+        sample1 = (frame * frame_length) - (frame_length - 1) - (frame_length/2);
+        sample2 = (frame * frame_length) - (frame_length/2);
+    end     
     ham = hamming(frame_length);
     tf = x_res(sample1:sample2);
     [magSpec] = magAndPhase(tf);
-%     plot(magSpec);
     magSpecArr(:,i) = magSpec;
     i=i+1;
 end    
