@@ -87,7 +87,7 @@ for f=1:L
 
     vocalTractArr = vocalTractArr';
     numVectors = length(vocalTractArr);
-    vectorPeriod = 625;
+    vectorPeriod = 0.01*10000000;
     numDims = 10;
     parmKind = 9;
     
