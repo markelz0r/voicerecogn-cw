@@ -1,6 +1,7 @@
 path = 'audio_out_training';
 files = dir(strcat(path,'\*.wav'));
 L = length (files);
+fopen('list.txt','w');
 for f=1:L
     
     %reading audio file and resampling it
@@ -10,24 +11,29 @@ for f=1:L
     x_res = resample(x,fs_target,fs_old); %resampling onto 16khz
 
     %pre-emphasis-filter
-    B=[1, -0.97];
-    x_res = filter(B, 1, x_res, [], 2);
+     pre_f=[1, -1];
+     x_res = filter(pre_f, 1, x_res, [], 2);
 
 
     %applying hamming window
     samples_num = length(x_res);
     frame_length = 320;
-    frame_num = floor(samples_num/frame_length);
+    frame_num = (floor(samples_num/frame_length))*2;
 
     i = 1;
     for frame = 1:frame_num
         if i==1 
             sample1 = (frame * frame_length) - (frame_length - 1);
             sample2 = (frame * frame_length);
-        else  
-            sample1 = (frame * frame_length) - (frame_length - 1) - (frame_length/2);
-            sample2 = (frame * frame_length) - (frame_length/2);
-        end     
+%         else  
+%             sample1 = (frame * frame_length) - (frame_length - 1) - (frame_length/2);
+%             sample2 = (frame * frame_length) - (frame_length/2);
+%         end     
+        else
+            sample1 = oldsample2 - (frame_length/2);
+            sample2 = oldsample2 + (frame_length/2 -1);
+        end  
+        oldsample2 = sample2;
         ham = hamming(frame_length);
         tf = x_res(sample1:sample2);
         [magSpec] = magAndPhase(tf);
@@ -35,28 +41,66 @@ for f=1:L
         i=i+1;
     end    
 
-    %%Filterbank%%
-    numChan = 21;
-    x = floor(linspace(1, frame_length/2, numChan));
+    %%Mel-Scale Filterbank%%
+melLowerBound = 2595 * log10((1 + 100/700)); % Lower bound = 100Hz
+melHigherBound = 2595 * log10((1 + 8000/700)); % Lower bound = 8000Hz
+numChan = 22;   % Number of channels
+% Generating 21 mel points
+melLinSpacedArr = floor(linspace(melLowerBound, melHigherBound, numChan));
 
-    chanMean = zeros(1, numChan-1);
-    filterBankArr = zeros(numChan-1,length(magSpecArr));
-    vocalTractArr = zeros(((numChan-1)/2),length(magSpecArr));
-    for magSpecArrIndex = 1:length(magSpecArr)
-        for arrayIndex = 2:length(x)
-            magSpecElem = magSpecArr(:, magSpecArrIndex);    
-            firstSamp = x(arrayIndex-1);
-            lastSamp = x(arrayIndex);
-            channel = magSpecElem(firstSamp:lastSamp);
-            chanMean(arrayIndex-1) = mean(channel);        
-        end
-        filterBankArr(:,magSpecArrIndex)= chanMean;
-        logOfFilterBank = log10(chanMean); 
-        dctResult = dct(logOfFilterBank);
-        vocalTractArr(:,magSpecArrIndex) = dctResult(1:length(dctResult)/2);
+% Converting the mel points to frequency and finding the corresponding
+% sample number in each frame
+melScaleSamp = zeros(1, numChan);
+for melLinSpacedIndex = 1:length(melLinSpacedArr)
+    freqMelScl = 700 * (10^(melLinSpacedArr(melLinSpacedIndex)/2595) - 1);
+    melScaleSamp(melLinSpacedIndex) = floor((frame_length+1)*freqMelScl/fs_target);
+end
+
+
+% Extracting channels (triangular filterbank)
+filterbank = zeros(numChan-2, length(frame_length/2));
+for channelNumber = 2:(numChan-1)
+    
+    prevMelPoint = melScaleSamp(channelNumber-1);
+    midMelPoint = melScaleSamp(channelNumber);
+    nextMelPoint = melScaleSamp(channelNumber+1);
+    
+    for lastMelToMidMel = prevMelPoint:midMelPoint
+        
+        filterbank(channelNumber-1, lastMelToMidMel) = ...
+        (lastMelToMidMel - prevMelPoint) / (midMelPoint - prevMelPoint);
+        
     end
+    
+    for midMelToNextMel = midMelPoint:nextMelPoint
+        
+        filterbank(channelNumber-1, midMelToNextMel) = ...
+        (nextMelPoint - midMelToNextMel) / (nextMelPoint - midMelPoint);
+        
+    end
+    
+end
 
-    plot(vocalTractArr);
+
+% Applying filterbank to signal
+filteredSignal = zeros(numChan-2, frame_length/2);
+filteredFrames= zeros(numChan-2, length(magSpecArr));
+filterMean = zeros(numChan-2, 1);
+vocalTractFrames = zeros(length(magSpecArr), (numChan-2)/2);
+for magSpecArrIndex = 1:length(magSpecArr)
+    for filter1 = 1:size(filterbank, 1)
+        signalFrame = magSpecArr(:, magSpecArrIndex)';
+        filterSignal = filterbank(filter1, :);
+        filteredSignal(filter1, :) = signalFrame.*filterSignal;
+        filterMean(filter1, 1) = mean(filteredSignal(filter1, :));
+    end
+    filteredFrames(:, magSpecArrIndex) = filterMean(:, 1);
+    logOfFilterBank = log10(filteredFrames); 
+    dctResult = dct(logOfFilterBank);
+    dctResult = dctResult';
+    %Truncating the result of DCT to extract vocal tract informationx    
+    vocalTractFrames = dctResult(:, 1:size(dctResult, 2)/2);
+end
 
 
 
@@ -83,9 +127,9 @@ for f=1:L
     % Open file for writing:
     %fid = fopen('mfc_out/'+randString+'.mfc', 'w', 'ieee-be');
     fn = files(f).name(1:end-4);
-    fid = fopen(strcat('mfc_out/',fn,'.mfc'),'w', 'ieee-be');
+    fid = fopen(strcat('mfc_out/train/',fn,'.mfc'),'w', 'ieee-be');
 
-    vocalTractArr = vocalTractArr';
+    vocalTractArr = vocalTractFrames;
     numVectors = length(vocalTractArr);
     vectorPeriod = 0.01*10000000;
     numDims = 10;
@@ -103,7 +147,7 @@ for f=1:L
             fwrite(fid, vocalTractArr(ii, j), 'float32');    
         end
     end
-
+fclose('all');
 end
 
 
