@@ -10,8 +10,17 @@ for f=1:L
     x = audion_in(:,1); %taking chanel 1 only
     x_res = resample(x,fs_target,fs_old); %resampling onto 16khz
 
+    
+    %adding noise
+    noise_level = 0.03;
+    [x_noise] =  audioread('babble.wav');
+    x_noise = x_noise(1:length(x_res));
+    x_res_old = x_res;
+    x_res = x_res + x_noise*noise_level;
+   
+    
     %pre-emphasis-filter
-     pre_f=[1, -1];
+     pre_f=[1, -0.97];
      x_res = filter(pre_f, 1, x_res, [], 2);
 
 
@@ -132,7 +141,7 @@ end
     vocalTractArr = vocalTractFrames;
     numVectors = length(vocalTractArr);
     vectorPeriod = 0.01*10000000;
-    numDims = 10;
+    numDims = 11;
     parmKind = 9;
     
     % Write the header information% 
