@@ -1,4 +1,4 @@
-path = 'audio_out_training';
+path = 'demo';
 files = dir(strcat(path,'\*.wav'));
 L = length (files);
 fopen('list.txt','w');
@@ -9,16 +9,20 @@ for f=1:L
     [audion_in,fs_old] = audioread(strcat(path,'\',files(f).name));
     x = audion_in(:,1); %taking chanel 1 only
     x_res = resample(x,fs_target,fs_old); %resampling onto 16khz
-
+    
+    %random noise in the beggining of the file
+    rndn=randn([1 5000])/5000;
+    x_res(1:5000) = rndn;
+    plot(x_res);
     
     %adding noise
-    noise_level = 0.03;
-    [x_noise] =  audioread('babble.wav');
-    x_noise = x_noise(1:length(x_res));
-    x_res_old = x_res;
-    x_res = x_res + x_noise*noise_level;
-   
-    
+%     noise_level = 0.001;
+%     [x_noise] =  audioread('babble.wav');
+%     x_noise = x_noise(1:length(x_res));
+%     x_res_old = x_res;
+%     x_res = x_res*1.5 + x_noise*noise_level;
+%     audiowrite('sample.wav',x_res,fs_target);
+%     
     %pre-emphasis-filter
      pre_f=[1, -0.97];
      x_res = filter(pre_f, 1, x_res, [], 2);
@@ -137,13 +141,13 @@ for f=1:L
     randString = s( ceil(rand(1,sLength)*numRands) );
 
      flist = fopen('list.txt','a');
-     fwrite(flist, strcat('MFCCs/train/',files(f).name)); 
+     fwrite(flist, strcat('MFCCs/demo/',files(f).name)); 
 
 
     % Open file for writing:
     %fid = fopen('mfc_out/'+randString+'.mfc', 'w', 'ieee-be');
     fn = files(f).name(1:end-4);
-    fid = fopen(strcat('mfc_out/train/',fn,'.mfc'),'w', 'ieee-be');
+    fid = fopen(strcat('mfc_out/demo/',fn,'.mfc'),'w', 'ieee-be');
 
     vocalTractArr = vocalTractFrames;
     numVectors = length(vocalTractArr);
