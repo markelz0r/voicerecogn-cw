@@ -1,4 +1,4 @@
-path = 'audio_out_training';
+path = 'demo';
 files = dir(strcat(path,'\*.wav'));
 L = length (files);
 fopen('list.txt','w');
@@ -10,6 +10,9 @@ for f=1:L
     x = audion_in(:,1); %taking chanel 1 only
     x_res = resample(x,fs_target,fs_old); %resampling onto 16khz
 
+    rndn=randn([1 5000])/5000;
+    x_res(1:5000) = rndn;
+    
     %pre-emphasis-filter
      pre_f=[1, -1];
      x_res = filter(pre_f, 1, x_res, [], 2);
@@ -42,7 +45,7 @@ for f=1:L
         i=i+1;
     end    
 
-    % Calculating the power spectrum --------------------------------
+    % Calculating the power spectrum 
     powerSpec = zeros(frame_num, 1);
     for magSpecArrIndex = 1:length(magSpecArr)
         powerSpec(magSpecArrIndex, 1) = sum(magSpecArr(magSpecArrIndex, :).^2);
@@ -97,7 +100,7 @@ for f=1:L
     filterMean = zeros(1, numChan-2);
     logOfFilterBank = zeros(length(magSpecArr), numChan-2);
     dctResult = zeros(length(magSpecArr), (numChan-2));
-    vocalTractFrames = zeros(length(magSpecArr), ((numChan-2)/2 )+1 );
+    vocalTractFrames = zeros(length(magSpecArr), numChan-1 );
     
     for magSpecArrIndex = 1:length(magSpecArr)
         for filter1 = 1:size(filterbank, 2)
@@ -111,9 +114,17 @@ for f=1:L
         dctResult(magSpecArrIndex, :) = dct(logOfFilterBank(magSpecArrIndex, :));        
         %Truncating the result of DCT to extract vocal tract informationx    
         vocalTractFrames(magSpecArrIndex, 1:((numChan-2)/2) ) = dctResult(magSpecArrIndex, 1:size(dctResult, 2)/2);        
-    end  
-    vocalTractFrames(:, ((numChan-2)/2 )+1 ) = powerSpec;
+    end
+    
+    
+    defCoeff = calculateDefCoef(vocalTractFrames, numChan);
+    
+    vocalTractFrames(:, (numChan/2):(numChan-2)) = defCoeff;
+    vocalTractFrames(:, numChan-1 ) = powerSpec;
 
+    
+    
+    
 
 %     %generating a filename
     s = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -128,18 +139,18 @@ for f=1:L
     randString = s( ceil(rand(1,sLength)*numRands) );
 
      flist = fopen('list.txt','a');
-     fwrite(flist, strcat('MFCCs/train/',files(f).name)); 
+     fwrite(flist, strcat('MFCCs/demo/',files(f).name)); 
 
 
     % Open file for writing:
     %fid = fopen('mfc_out/'+randString+'.mfc', 'w', 'ieee-be');
     fn = files(f).name(1:end-4);
-    fid = fopen(strcat('mfc_out/train/',fn,'.mfc'),'w', 'ieee-be');
+    fid = fopen(strcat('mfc_out/demo/',fn,'.mfc'),'w', 'ieee-be');
 
     vocalTractArr = vocalTractFrames;
     numVectors = length(vocalTractArr);
     vectorPeriod = 0.01*10000000;
-    numDims = 11;
+    numDims = 21;
     parmKind = 9;
     
     % Write the header information% 
@@ -158,6 +169,27 @@ fclose('all');
 end
 
 
+function [defcoef] = calculateDefCoef(mefccCoef, numChan)
+    defcoef = zeros(length(mefccCoef), ((numChan-2)/2 ) );    
+    for mefccCoefFrameIndex = 1:length(mefccCoef)        
+        for mefccCoefFeatIndex = 1:(numChan-2)/2
+            if mefccCoefFeatIndex == 1
+                defcoef(mefccCoefFrameIndex, mefccCoefFeatIndex) = ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex + 1) - ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex);
+            elseif mefccCoefFeatIndex == size(mefccCoef, 2)
+                defcoef(mefccCoefFrameIndex, mefccCoefFeatIndex) = ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex) - ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex - 1);
+            else 
+                defcoef(mefccCoefFrameIndex, mefccCoefFeatIndex) = ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex + 1) - ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex - 1);
+            end                        
+        end        
+    end
+    defcoef;
+end
 
 function [magSpec] = magAndPhase(shortTimeFrame)
 frame_length = 320;
