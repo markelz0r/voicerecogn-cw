@@ -1,28 +1,22 @@
-path = 'demo';
-files = dir(strcat(path,'\*.wav'));
+path = './audio_out_test/';
+aud_voice_path = strcat(path,'*.wav');
+% disp(aud_voice_path);
+files = dir(aud_voice_path);
+% disp(files)
 L = length (files);
-fopen('list.txt','w');
+% disp(L)
+% fopen('list.txt','w');
 for f=1:L
     
     %reading audio file and resampling it
     fs_target = 16000;
-    [audion_in,fs_old] = audioread(strcat(path,'\',files(f).name));
+    [audion_in,fs_old] = audioread(strcat(path,'/',files(f).name));
     x = audion_in(:,1); %taking chanel 1 only
     x_res = resample(x,fs_target,fs_old); %resampling onto 16khz
-    
-    %random noise in the beggining of the file
+
     rndn=randn([1 5000])/5000;
     x_res(1:5000) = rndn;
-    plot(x_res);
     
-    %adding noise
-%     noise_level = 0.001;
-%     [x_noise] =  audioread('babble.wav');
-%     x_noise = x_noise(1:length(x_res));
-%     x_res_old = x_res;
-%     x_res = x_res*1.5 + x_noise*noise_level;
-%     audiowrite('sample.wav',x_res,fs_target);
-%     
     %pre-emphasis-filter
      pre_f=[1, -0.97];
      x_res = filter(pre_f, 1, x_res, [], 2);
@@ -55,7 +49,7 @@ for f=1:L
         i=i+1;
     end    
 
-    % Calculating the power spectrum --------------------------------
+    % Calculating the power spectrum 
     powerSpec = zeros(frame_num, 1);
     for magSpecArrIndex = 1:length(magSpecArr)
         powerSpec(magSpecArrIndex, 1) = sum(magSpecArr(magSpecArrIndex, :).^2);
@@ -110,7 +104,7 @@ for f=1:L
     filterMean = zeros(1, numChan-2);
     logOfFilterBank = zeros(length(magSpecArr), numChan-2);
     dctResult = zeros(length(magSpecArr), (numChan-2));
-    vocalTractFrames = zeros(length(magSpecArr), ((numChan-2)/2 )+1 );
+    vocalTractFrames = zeros(length(magSpecArr), numChan-1 );
     
     for magSpecArrIndex = 1:length(magSpecArr)
         for filter1 = 1:size(filterbank, 2)
@@ -124,35 +118,27 @@ for f=1:L
         dctResult(magSpecArrIndex, :) = dct(logOfFilterBank(magSpecArrIndex, :));        
         %Truncating the result of DCT to extract vocal tract informationx    
         vocalTractFrames(magSpecArrIndex, 1:((numChan-2)/2) ) = dctResult(magSpecArrIndex, 1:size(dctResult, 2)/2);        
-    end  
-    vocalTractFrames(:, ((numChan-2)/2 )+1 ) = powerSpec;
 
+    end
+    
+    
+    defCoeff = calculateDefCoef(vocalTractFrames, numChan);
+    
+    vocalTractFrames(:, (numChan/2):(numChan-2)) = defCoeff;
+    vocalTractFrames(:, numChan-1 ) = powerSpec;
 
-%     %generating a filename
-    s = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
-    %find number of random characters to choose from
-    numRands = length(s); 
-
-    %specify length of random string to generate
-    sLength = 10;
-
-    %generate random string
-    randString = s( ceil(rand(1,sLength)*numRands) );
-
-     flist = fopen('list.txt','a');
-     fwrite(flist, strcat('MFCCs/demo/',files(f).name)); 
-
+    
+    %Writing the mfcc files_______________________________________
 
     % Open file for writing:
     %fid = fopen('mfc_out/'+randString+'.mfc', 'w', 'ieee-be');
     fn = files(f).name(1:end-4);
-    fid = fopen(strcat('mfc_out/demo/',fn,'.mfc'),'w', 'ieee-be');
+    fid = fopen(strcat('mfc_out/test/',fn,'.mfc'),'w', 'ieee-be');
 
     vocalTractArr = vocalTractFrames;
     numVectors = length(vocalTractArr);
     vectorPeriod = 0.01*10000000;
-    numDims = 11;
+    numDims = 21;
     parmKind = 9;
     
     % Write the header information% 
@@ -171,6 +157,27 @@ fclose('all');
 end
 
 
+function [defcoef] = calculateDefCoef(mefccCoef, numChan)
+    defcoef = zeros(length(mefccCoef), ((numChan-2)/2 ) );    
+    for mefccCoefFrameIndex = 1:length(mefccCoef)        
+        for mefccCoefFeatIndex = 1:(numChan-2)/2
+            if mefccCoefFeatIndex == 1
+                defcoef(mefccCoefFrameIndex, mefccCoefFeatIndex) = ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex + 1) - ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex);
+            elseif mefccCoefFeatIndex == size(mefccCoef, 2)
+                defcoef(mefccCoefFrameIndex, mefccCoefFeatIndex) = ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex) - ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex - 1);
+            else 
+                defcoef(mefccCoefFrameIndex, mefccCoefFeatIndex) = ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex + 1) - ...
+                    mefccCoef(mefccCoefFrameIndex, mefccCoefFeatIndex - 1);
+            end                        
+        end        
+    end
+    defcoef;
+end
 
 function [magSpec] = magAndPhase(shortTimeFrame)
 frame_length = 320;
