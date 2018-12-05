@@ -1,12 +1,16 @@
-path = 'demo';
-files = dir(strcat(path,'\*.wav'));
+path = './audio_out_test/';
+aud_voice_path = strcat(path,'*.wav');
+% disp(aud_voice_path);
+files = dir(aud_voice_path);
+% disp(files)
 L = length (files);
-fopen('list.txt','w');
+% disp(L)
+% fopen('list.txt','w');
 for f=1:L
     
     %reading audio file and resampling it
     fs_target = 16000;
-    [audion_in,fs_old] = audioread(strcat(path,'\',files(f).name));
+    [audion_in,fs_old] = audioread(strcat(path,'/',files(f).name));
     x = audion_in(:,1); %taking chanel 1 only
     x_res = resample(x,fs_target,fs_old); %resampling onto 16khz
 
@@ -123,29 +127,12 @@ for f=1:L
     vocalTractFrames(:, numChan-1 ) = powerSpec;
 
     
-    
-    
-
-%     %generating a filename
-    s = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
-    %find number of random characters to choose from
-    numRands = length(s); 
-
-    %specify length of random string to generate
-    sLength = 10;
-
-    %generate random string
-    randString = s( ceil(rand(1,sLength)*numRands) );
-
-     flist = fopen('list.txt','a');
-     fwrite(flist, strcat('MFCCs/demo/',files(f).name)); 
-
+    %Writing the mfcc files_______________________________________
 
     % Open file for writing:
     %fid = fopen('mfc_out/'+randString+'.mfc', 'w', 'ieee-be');
     fn = files(f).name(1:end-4);
-    fid = fopen(strcat('mfc_out/demo/',fn,'.mfc'),'w', 'ieee-be');
+    fid = fopen(strcat('mfc_out/test/',fn,'.mfc'),'w', 'ieee-be');
 
     vocalTractArr = vocalTractFrames;
     numVectors = length(vocalTractArr);
