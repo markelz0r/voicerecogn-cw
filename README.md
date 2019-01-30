@@ -1,4 +1,6 @@
 # voicerecogn-cw
+Voice recognition software developed by Bijan Ghasemi Afshar and Andrew Odintsov
+
 
 ## Training 
 * train.sh 
